@@ -40,6 +40,7 @@ dependencies {
     implementation 'org.codehaus.mojo:animal-sniffer-annotations:1.18'
     implementation 'com.google.code.findbugs:jsr305:3.0.2'
 
+    implementation 'com.google.code.gson:gson:2.8.5'
 
     testImplementation 'junit:junit:4.13.2'
     androidTestImplementation 'androidx.test.ext:junit:1.1.5'
