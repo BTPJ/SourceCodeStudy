@@ -265,6 +265,7 @@ final class RequestBuilder {
       }
     }
 
+    // 这里构建OkHttp.Request.Builder对象
     return requestBuilder.url(url).headers(headersBuilder.build()).method(method, body);
   }
 

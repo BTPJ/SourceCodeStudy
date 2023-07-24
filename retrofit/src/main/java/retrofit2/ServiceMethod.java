@@ -23,8 +23,10 @@ import javax.annotation.Nullable;
 
 abstract class ServiceMethod<T> {
   static <T> ServiceMethod<T> parseAnnotations(Retrofit retrofit, Method method) {
+    // 这里会创建一个封装了OkHttp.Request的请求对象
     RequestFactory requestFactory = RequestFactory.parseAnnotations(retrofit, method);
 
+    // 获取请求服务的返回值,校验合法性
     Type returnType = method.getGenericReturnType();
     if (Utils.hasUnresolvableType(returnType)) {
       throw methodError(
@@ -36,6 +38,7 @@ abstract class ServiceMethod<T> {
       throw methodError(method, "Service methods cannot return void.");
     }
 
+    // 请求方法的解析（解析注解）
     return HttpServiceMethod.parseAnnotations(retrofit, method, requestFactory);
   }
 

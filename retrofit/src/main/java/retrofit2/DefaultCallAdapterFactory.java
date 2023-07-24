@@ -44,6 +44,8 @@ final class DefaultCallAdapterFactory extends CallAdapter.Factory {
     }
     final Type responseType = Utils.getParameterUpperBound(0, (ParameterizedType) returnType);
 
+    // 判断请求方法上是否有@SkipCallbackExecutor注解，有返回null，没有返回callbackExecutor
+    // 注意默认情况下callbackExecutor在Java平台也是null，而在Android平台返回MainThreadExecutor
     final Executor executor =
         Utils.isAnnotationPresent(annotations, SkipCallbackExecutor.class)
             ? null
@@ -64,6 +66,7 @@ final class DefaultCallAdapterFactory extends CallAdapter.Factory {
 
   static final class ExecutorCallbackCall<T> implements Call<T> {
     final Executor callbackExecutor;
+    /** Call代理，这里传入的其实就是okHttpCall */
     final Call<T> delegate;
 
     ExecutorCallbackCall(Executor callbackExecutor, Call<T> delegate) {

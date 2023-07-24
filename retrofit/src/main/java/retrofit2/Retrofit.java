@@ -64,13 +64,22 @@ import retrofit2.http.Url;
  * @author Jake Wharton (jw@squareup.com)
  */
 public final class Retrofit {
+  /** 主要用来缓存请求方法 */
   private final Map<Method, ServiceMethod<?>> serviceMethodCache = new ConcurrentHashMap<>();
 
+  /** okhttp3.Call.Factory接口的实现类（OkHttpClient是唯一实现类） */
   final okhttp3.Call.Factory callFactory;
+  /** 服务器根路径（当包含路径时必须以/结尾） */
   final HttpUrl baseUrl;
+  /** 请求响应数据解析器集合（如GsonConverterFactory.create()） */
   final List<Converter.Factory> converterFactories;
+  /** 网络请求适配器工厂集合，用于放置我们的网络请求适配器工厂（网络请求适配器：把我们的call对象转换成其他类型）
+   * 如RxJavaCallAdapterFactory
+   */
   final List<CallAdapter.Factory> callAdapterFactories;
+  /** 用于回调执行（如Android中是MainThreadExecutor即主线程执行） */
   final @Nullable Executor callbackExecutor;
+  /** 标志位，控制 Retrofit 是否立即验证 HTTP 请求和响应，以确保它们的正确性和完整性 */
   final boolean validateEagerly;
 
   Retrofit(
@@ -151,10 +160,12 @@ public final class Retrofit {
               public @Nullable Object invoke(Object proxy, Method method, @Nullable Object[] args)
                   throws Throwable {
                 // If the method is a method from Object then defer to normal invocation.
+                // 如果方法是Object类中的方法，直接正常调用即可，无需代理
                 if (method.getDeclaringClass() == Object.class) {
                   return method.invoke(this, args);
                 }
                 args = args != null ? args : emptyArgs;
+                // 这里判断了是否是默认方法（java8接口新增了默认方法），不是就调用loadServiceMethod
                 return platform.isDefaultMethod(method)
                     ? platform.invokeDefaultMethod(method, service, proxy, args)
                     : loadServiceMethod(method).invoke(args);
@@ -182,6 +193,7 @@ public final class Retrofit {
       Collections.addAll(check, candidate.getInterfaces());
     }
 
+    // 是否立即解析
     if (validateEagerly) {
       Platform platform = Platform.get();
       for (Method method : service.getDeclaredMethods()) {
@@ -192,13 +204,20 @@ public final class Retrofit {
     }
   }
 
+  /**
+   * 加载数据请求服务的方法（由于解析会用到反射，加载后会存入缓存提升性能）
+   * @param method Method
+   * @return 请求服务的方法
+   */
   ServiceMethod<?> loadServiceMethod(Method method) {
+    // 从缓存获取有就直接返回
     ServiceMethod<?> result = serviceMethodCache.get(method);
     if (result != null) return result;
 
     synchronized (serviceMethodCache) {
       result = serviceMethodCache.get(method);
       if (result == null) {
+        // 缓存中没有，进行解析，返回的同时插入缓存
         result = ServiceMethod.parseAnnotations(this, method);
         serviceMethodCache.put(method, result);
       }
@@ -556,9 +575,16 @@ public final class Retrofit {
      * Endpoint: //github.com/square/retrofit/<br>
      * Result: http://github.com/square/retrofit/ (note the scheme stays 'http')
      */
+    /**
+     * 对用户设置的baseUrl进行判空和转换（组装baseUrl和路径），
+     * @param baseUrl
+     * @return
+     */
     public Builder baseUrl(HttpUrl baseUrl) {
       Objects.requireNonNull(baseUrl, "baseUrl == null");
       List<String> pathSegments = baseUrl.pathSegments();
+      // 当baseUrl是一个域名加路径但路径最后一个字符不是以'/'结尾抛异常
+      // 如https://www.wanandroid.com/api不行，必须为https://www.wanandroid.com/api/
       if (!"".equals(pathSegments.get(pathSegments.size() - 1))) {
         throw new IllegalArgumentException("baseUrl must end in /: " + baseUrl);
       }
@@ -623,27 +649,34 @@ public final class Retrofit {
         throw new IllegalStateException("Base URL required.");
       }
 
+      // 设置OkHttp中Call的工厂类（OkHttpClient是唯一实现类）
       okhttp3.Call.Factory callFactory = this.callFactory;
       if (callFactory == null) {
+        // 没有设置的话使用默认的OkHttpClient对象
         callFactory = new OkHttpClient();
       }
 
+      // 执行请求回调的对象，Android中defaultCallbackExecutor是MainThreadExecutor即主线程
       Executor callbackExecutor = this.callbackExecutor;
       if (callbackExecutor == null) {
         callbackExecutor = platform.defaultCallbackExecutor();
       }
 
       // Make a defensive copy of the adapters and add the default Call adapter.
+      // 网络请求适配器工厂集合
       List<CallAdapter.Factory> callAdapterFactories = new ArrayList<>(this.callAdapterFactories);
       callAdapterFactories.addAll(platform.defaultCallAdapterFactories(callbackExecutor));
 
       // Make a defensive copy of the converters.
+      // 数据转换器工厂集合（网络请求返回数据解析）
       List<Converter.Factory> converterFactories =
           new ArrayList<>(
               1 + this.converterFactories.size() + platform.defaultConverterFactoriesSize());
 
       // Add the built-in converter factory first. This prevents overriding its behavior but also
       // ensures correct behavior when using converters that consume all types.
+      // 先添加内置转换器工厂BuiltInConverters，主要包含一些常见类型（如
+      // String：将响应数据转换为 String 类型、Integer、Long、Float、Double、Boolean、Character)的转换
       converterFactories.add(new BuiltInConverters());
       converterFactories.addAll(this.converterFactories);
       converterFactories.addAll(platform.defaultConverterFactories());

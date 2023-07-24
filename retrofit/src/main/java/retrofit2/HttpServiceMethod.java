@@ -32,13 +32,18 @@ abstract class HttpServiceMethod<ResponseT, ReturnT> extends ServiceMethod<Retur
    * Inspects the annotations on an interface method to construct a reusable service method that
    * speaks HTTP. This requires potentially-expensive reflection so it is best to build each service
    * method only once and reuse it.
+   * 检查接口方法上的注释，以构造一个可重复使用的HTTP服务方法。需要通过反射，所以需要使用缓存进行重用
    */
   static <ResponseT, ReturnT> HttpServiceMethod<ResponseT, ReturnT> parseAnnotations(
       Retrofit retrofit, Method method, RequestFactory requestFactory) {
+    /** 是否是协程调用 */
     boolean isKotlinSuspendFunction = requestFactory.isKotlinSuspendFunction;
+    /** 协程返回是否是Response包装实体 */
     boolean continuationWantsResponse = false;
+    /** 协程返回是否是null */
     boolean continuationBodyNullable = false;
 
+    // 解析方法上的所有注解
     Annotation[] annotations = method.getAnnotations();
     Type adapterType;
     if (isKotlinSuspendFunction) {
@@ -47,6 +52,7 @@ abstract class HttpServiceMethod<ResponseT, ReturnT> extends ServiceMethod<Retur
           Utils.getParameterLowerBound(
               0, (ParameterizedType) parameterTypes[parameterTypes.length - 1]);
       if (getRawType(responseType) == Response.class && responseType instanceof ParameterizedType) {
+        // 这里判断协程的返回是否是一个Response，即判断是一个Response包装实体
         // Unwrap the actual body type from Response<T>.
         responseType = Utils.getParameterUpperBound(0, (ParameterizedType) responseType);
         continuationWantsResponse = true;
@@ -60,12 +66,16 @@ abstract class HttpServiceMethod<ResponseT, ReturnT> extends ServiceMethod<Retur
       adapterType = new Utils.ParameterizedTypeImpl(null, Call.class, responseType);
       annotations = SkipCallbackExecutorImpl.ensurePresent(annotations);
     } else {
+      // 获取方法返回类型
       adapterType = method.getGenericReturnType();
     }
 
+    // 获取CallAdapter,分析可发现这里最后返回的是DefaultCallAdapterFactory
     CallAdapter<ResponseT, ReturnT> callAdapter =
         createCallAdapter(retrofit, method, adapterType, annotations);
     Type responseType = callAdapter.responseType();
+    // 返回类型的校验
+    // 返回类型不能为okhttp3.Response类型
     if (responseType == okhttp3.Response.class) {
       throw methodError(
           method,
@@ -73,6 +83,7 @@ abstract class HttpServiceMethod<ResponseT, ReturnT> extends ServiceMethod<Retur
               + getRawType(responseType).getName()
               + "' is not a valid response body type. Did you mean ResponseBody?");
     }
+    // 返回类型不能是Response，必须要包含泛型才行,类似于Response<String>
     if (responseType == Response.class) {
       throw methodError(method, "Response must include generic type (e.g., Response<String>)");
     }
@@ -81,14 +92,19 @@ abstract class HttpServiceMethod<ResponseT, ReturnT> extends ServiceMethod<Retur
       throw methodError(method, "HEAD method must use Void as response type.");
     }
 
+    // 获取Convert对象，自带的是BuiltInConverters，我们传入了GsonConverterFactory
     Converter<ResponseBody, ResponseT> responseConverter =
         createResponseConverter(retrofit, method, responseType);
 
+    // 获取一个okhttp3.Call.Factory对象，其实就是OkHttpClient对象
     okhttp3.Call.Factory callFactory = retrofit.callFactory;
     if (!isKotlinSuspendFunction) {
+      // 不是Kotlin协程的suspend方法
+      // 返回一个新建的CallAdapted对象，传入requestFactory, callFactory, responseConverter, callAdapter
       return new CallAdapted<>(requestFactory, callFactory, responseConverter, callAdapter);
     } else if (continuationWantsResponse) {
       //noinspection unchecked Kotlin compiler guarantees ReturnT to be Object.
+      // 返回类型是Response<T>时
       return (HttpServiceMethod<ResponseT, ReturnT>)
           new SuspendForResponse<>(
               requestFactory,
@@ -96,6 +112,7 @@ abstract class HttpServiceMethod<ResponseT, ReturnT> extends ServiceMethod<Retur
               responseConverter,
               (CallAdapter<ResponseT, Call<ResponseT>>) callAdapter);
     } else {
+      // 返回类型是T时
       //noinspection unchecked Kotlin compiler guarantees ReturnT to be Object.
       return (HttpServiceMethod<ResponseT, ReturnT>)
           new SuspendForBody<>(

@@ -31,6 +31,7 @@ import java.util.concurrent.Executor;
 import javax.annotation.Nullable;
 import org.codehaus.mojo.animal_sniffer.IgnoreJRERequirement;
 
+/** 平台类（Android平台和Java平台） */
 class Platform {
   private static final Platform PLATFORM = findPlatform();
 
@@ -38,6 +39,10 @@ class Platform {
     return PLATFORM;
   }
 
+  /**
+   * 判断当前平台是Android还是Java
+   * @return 平台类型
+   */
   private static Platform findPlatform() {
     return "Dalvik".equals(System.getProperty("java.vm.name"))
         ? new Android() //

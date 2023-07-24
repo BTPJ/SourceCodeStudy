@@ -30,20 +30,26 @@ import okio.ForwardingSource;
 import okio.Okio;
 import okio.Timeout;
 
+/** 对okhttp3.Call的封装 */
 final class OkHttpCall<T> implements Call<T> {
+  /** OkHttp的请求Request的封装 */
   private final RequestFactory requestFactory;
   private final Object[] args;
+  /** okhttp3.Call.Factory可以理解为okhttpClient */
   private final okhttp3.Call.Factory callFactory;
+  /** 响应转换器 */
   private final Converter<ResponseBody, T> responseConverter;
 
   private volatile boolean canceled;
 
+  /** 持有对okhttp3.Call的引用 */
   @GuardedBy("this")
   private @Nullable okhttp3.Call rawCall;
 
   @GuardedBy("this") // Either a RuntimeException, non-fatal Error, or IOException.
   private @Nullable Throwable creationFailure;
 
+  /** 是否已经执行execute的标志位（是否已经在请求队列） */
   @GuardedBy("this")
   private boolean executed;
 
@@ -86,6 +92,7 @@ final class OkHttpCall<T> implements Call<T> {
    * Returns the raw call, initializing it if necessary. Throws if initializing the raw call throws,
    * or has thrown in previous attempts to create it.
    */
+  /** 返回okhttp3.Call，有异常抛出 */
   @GuardedBy("this")
   private okhttp3.Call getRawCall() throws IOException {
     okhttp3.Call call = rawCall;
@@ -112,6 +119,7 @@ final class OkHttpCall<T> implements Call<T> {
     }
   }
 
+  /** 异步请求 */
   @Override
   public void enqueue(final Callback<T> callback) {
     Objects.requireNonNull(callback, "callback == null");
@@ -186,6 +194,7 @@ final class OkHttpCall<T> implements Call<T> {
     return executed;
   }
 
+  /** 同步请求 */
   @Override
   public Response<T> execute() throws IOException {
     okhttp3.Call call;
@@ -204,6 +213,7 @@ final class OkHttpCall<T> implements Call<T> {
     return parseResponse(call.execute());
   }
 
+  /** 利用okhttpClient创建okhttp3.Call对象 */
   private okhttp3.Call createRawCall() throws IOException {
     okhttp3.Call call = callFactory.newCall(requestFactory.create(args));
     if (call == null) {
@@ -212,6 +222,12 @@ final class OkHttpCall<T> implements Call<T> {
     return call;
   }
 
+  /**
+   * 负责响应的解析
+   * @param rawResponse
+   * @return
+   * @throws IOException
+   */
   Response<T> parseResponse(okhttp3.Response rawResponse) throws IOException {
     ResponseBody rawBody = rawResponse.body();
 
@@ -240,6 +256,7 @@ final class OkHttpCall<T> implements Call<T> {
 
     ExceptionCatchingResponseBody catchingBody = new ExceptionCatchingResponseBody(rawBody);
     try {
+      // 解析请求响应
       T body = responseConverter.convert(catchingBody);
       return Response.success(body, rawResponse);
     } catch (RuntimeException e) {

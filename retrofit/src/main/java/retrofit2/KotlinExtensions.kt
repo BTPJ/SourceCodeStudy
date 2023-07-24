@@ -28,6 +28,7 @@ import kotlin.coroutines.resumeWithException
 
 inline fun <reified T> Retrofit.create(): T = create(T::class.java)
 
+/** Call的扩展函数 */
 suspend fun <T : Any> Call<T>.await(): T {
   return suspendCancellableCoroutine { continuation ->
     continuation.invokeOnCancellation {
@@ -45,8 +46,10 @@ suspend fun <T : Any> Call<T>.await(): T {
                 '.' +
                 method.name +
                 " was null but response body type was declared as non-null")
+            // 协程返回请求错误
             continuation.resumeWithException(e)
           } else {
+            // 协程返回请求结果
             continuation.resume(body)
           }
         } else {

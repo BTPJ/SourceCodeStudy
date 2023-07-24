@@ -15,4 +15,3 @@ dependencyResolutionManagement {
 rootProject.name = "RetrofitStudy"
 include ':app'
 include ':retrofit'
-//include ':gson'
