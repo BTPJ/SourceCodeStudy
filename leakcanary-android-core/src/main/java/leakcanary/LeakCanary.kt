@@ -201,9 +201,12 @@ object LeakCanary {
         if (InternalLeakCanary.formFactor == TV) TvEventListener else NotificationEventListener
       },
       when {
+         // WorkManager多进程分析
           RemoteWorkManagerHeapAnalyzer.remoteLeakCanaryServiceInClasspath ->
             RemoteWorkManagerHeapAnalyzer
+          // WorkManager 异步分析
           WorkManagerHeapAnalyzer.validWorkManagerInClasspath -> WorkManagerHeapAnalyzer
+          // 异步线程分析（兜底策略）
           else -> BackgroundThreadHeapAnalyzer
       }
     ),

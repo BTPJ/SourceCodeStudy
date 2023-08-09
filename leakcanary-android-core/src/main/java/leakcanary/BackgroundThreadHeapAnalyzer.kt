@@ -21,9 +21,12 @@ object BackgroundThreadHeapAnalyzer : EventListener {
   override fun onEvent(event: Event) {
     if (event is HeapDump) {
       heapAnalyzerThreadHandler.post {
+        // 分析堆快照
         val doneEvent = AndroidDebugHeapAnalyzer.runAnalysisBlocking(event) { event ->
+          // 发送分析进度事件
           InternalLeakCanary.sendEvent(event)
         }
+        // 发送分析完成事件
         InternalLeakCanary.sendEvent(doneEvent)
       }
     }

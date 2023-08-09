@@ -15,6 +15,7 @@ import shark.SharkLog
  */
 object WorkManagerHeapAnalyzer : EventListener {
 
+  // 判断是否包含WorkManager
   internal val validWorkManagerInClasspath by lazy {
     try {
       Class.forName("androidx.work.WorkManager")

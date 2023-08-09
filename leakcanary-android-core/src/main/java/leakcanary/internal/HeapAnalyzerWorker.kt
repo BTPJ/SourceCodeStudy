@@ -14,10 +14,13 @@ import leakcanary.EventListener.Event
 internal class HeapAnalyzerWorker(appContext: Context, workerParams: WorkerParameters) :
   Worker(appContext, workerParams) {
   override fun doWork(): Result {
+    // 分析堆快照
     val doneEvent =
       AndroidDebugHeapAnalyzer.runAnalysisBlocking(inputData.asEvent()) { event ->
+        // 发送分析进度事件
         InternalLeakCanary.sendEvent(event)
       }
+    // 发送分析完成事件
     InternalLeakCanary.sendEvent(doneEvent)
     return Result.success()
   }

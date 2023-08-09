@@ -19,16 +19,19 @@ internal class RemoteHeapAnalyzerWorker(appContext: Context, workerParams: Worke
     val heapDump = inputData.asEvent<HeapDump>()
     val result = SettableFuture.create<Result>()
     heapAnalyzerThreadHandler.post {
+      // 分析堆快照
       val doneEvent = AndroidDebugHeapAnalyzer.runAnalysisBlocking(heapDump, isCanceled = {
         result.isCancelled
       }) { progressEvent ->
         if (!result.isCancelled) {
+          // 发送分析进度事件
           InternalLeakCanary.sendEvent(progressEvent)
         }
       }
       if (result.isCancelled) {
         SharkLog.d { "Remote heap analysis for ${heapDump.file} was canceled" }
       } else {
+        // 发送分析完成事件
         InternalLeakCanary.sendEvent(doneEvent)
         result.set(Result.success())
       }

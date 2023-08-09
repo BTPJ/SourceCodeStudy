@@ -101,21 +101,27 @@ internal class HeapDumpTrigger(
     if (iCanHasHeap is Nope) {
       if (iCanHasHeap is NotifyingNope) {
         // Before notifying that we can't dump heap, let's check if we still have retained object.
+        // 泄漏计数
         var retainedReferenceCount = objectWatcher.retainedObjectCount
-
+        // 泄漏计数>0时主动调用GC
         if (retainedReferenceCount > 0) {
+          // 这个方法是调用RunTime.getRuntime().GC()并休眠等待100ms
           gcTrigger.runGc()
+          // GC后再获取泄漏计数
           retainedReferenceCount = objectWatcher.retainedObjectCount
         }
 
         val nopeReason = iCanHasHeap.reason()
+        // 这里会判断泄漏计数是否>5(默认阈值)
         val wouldDump = !checkRetainedCount(
           retainedReferenceCount, config.retainedVisibleThreshold, nopeReason
         )
 
         if (wouldDump) {
           val uppercaseReason = nopeReason[0].toUpperCase() + nopeReason.substring(1)
+          // 回调onEvent
           onRetainInstanceListener.onEvent(DumpingDisabled(uppercaseReason))
+          // 展示通知
           showRetainedCountNotification(
             objectCount = retainedReferenceCount,
             contentText = uppercaseReason
@@ -142,6 +148,7 @@ internal class HeapDumpTrigger(
 
     val now = SystemClock.uptimeMillis()
     val elapsedSinceLastDumpMillis = now - lastHeapDumpUptimeMillis
+    // 计算距离上一次HeapDump时间未超过60s会拦截
     if (elapsedSinceLastDumpMillis < WAIT_BETWEEN_HEAP_DUMPS_MILLIS) {
       onRetainInstanceListener.onEvent(DumpHappenedRecently)
       showRetainedCountNotification(
@@ -154,8 +161,10 @@ internal class HeapDumpTrigger(
       return
     }
 
+    // 移除通知
     dismissRetainedCountNotification()
     val visibility = if (applicationVisible) "visible" else "not visible"
+    // 触发dumpHeap分析
     dumpHeap(
       retainedReferenceCount = retainedReferenceCount,
       retry = true,
@@ -348,6 +357,7 @@ internal class HeapDumpTrigger(
     delayMillis: Long = 0L
   ) {
     val checkCurrentlyScheduledAt = checkScheduledAt
+    // 避免重复postDelayed
     if (checkCurrentlyScheduledAt > 0) {
       return
     }
@@ -417,6 +427,7 @@ internal class HeapDumpTrigger(
     internal const val WAIT_AFTER_DUMP_FAILED_MILLIS = 5_000L
     private const val WAIT_FOR_OBJECT_THRESHOLD_MILLIS = 2_000L
     private const val DISMISS_NO_RETAINED_OBJECT_NOTIFICATION_MILLIS = 30_000L
+    /** 两次HeapDump的间隔时间为60s */
     private const val WAIT_BETWEEN_HEAP_DUMPS_MILLIS = 60_000L
   }
 }

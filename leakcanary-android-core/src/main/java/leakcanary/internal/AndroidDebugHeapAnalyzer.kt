@@ -51,11 +51,13 @@ internal object AndroidDebugHeapAnalyzer {
       progressEventListener(HeapAnalysisProgress(heapDumped.uniqueId, step, percent))
     }
 
+    // .hprof 文件
     val heapDumpFile = heapDumped.file
     val heapDumpDurationMillis = heapDumped.durationMillis
     val heapDumpReason = heapDumped.reason
 
     val heapAnalysis = if (heapDumpFile.exists()) {
+      // 分析堆快照
       analyzeHeap(heapDumpFile, progressListener, isCanceled)
     } else {
       missingFileFailure(heapDumpFile)

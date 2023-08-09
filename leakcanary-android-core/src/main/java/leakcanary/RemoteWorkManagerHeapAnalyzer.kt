@@ -20,6 +20,8 @@ object RemoteWorkManagerHeapAnalyzer : EventListener {
 
   private const val REMOTE_SERVICE_CLASS_NAME = "leakcanary.internal.RemoteLeakCanaryWorkerService"
 
+  // 这里通过RemoteLeakCanaryWorkerService这个类是否加载成功来判断
+  // 是否有'com.squareup.leakcanary:leakcanary-android-process:2.9.1'这个依赖
   internal val remoteLeakCanaryServiceInClasspath by lazy {
     try {
       Class.forName(REMOTE_SERVICE_CLASS_NAME)
@@ -32,6 +34,7 @@ object RemoteWorkManagerHeapAnalyzer : EventListener {
   override fun onEvent(event: Event) {
     if (event is HeapDump) {
       val application = InternalLeakCanary.application
+      // 创建并分发 WorkManager 多进程请求
       val heapAnalysisRequest =
         OneTimeWorkRequest.Builder(RemoteHeapAnalyzerWorker::class.java).apply {
           val dataBuilder = Data.Builder()
