@@ -18,6 +18,7 @@ internal class MainProcessAppWatcherInstaller : ContentProvider() {
 
   override fun onCreate(): Boolean {
     val application = context!!.applicationContext as Application
+    // LeakCanary初始化代码
     AppWatcher.manualInstall(application)
     return true
   }

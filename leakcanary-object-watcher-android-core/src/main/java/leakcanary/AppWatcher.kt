@@ -35,6 +35,7 @@ object AppWatcher {
       check(isInstalled) {
         "AppWatcher not installed"
       }
+      // 延时5秒执行
       mainHandler.postDelayed(it, retainedDelayMillis)
     },
     isEnabled = { true }
@@ -87,10 +88,11 @@ object AppWatcher {
    * )
    * ```
    */
+  /** LeakCanary初始化 */
   @JvmOverloads
   fun manualInstall(
     application: Application,
-    retainedDelayMillis: Long = TimeUnit.SECONDS.toMillis(5),
+    retainedDelayMillis: Long = TimeUnit.SECONDS.toMillis(5), // 默认5s后进行泄漏检测
     watchersToInstall: List<InstallableWatcher> = appDefaultWatchers(application)
   ) {
     checkMainThread()
@@ -107,8 +109,9 @@ object AppWatcher {
       LogcatSharkLog.install()
     }
     // Requires AppWatcher.objectWatcher to be set
+    // 初始化 InternalLeakCanary 内部引擎
     LeakCanaryDelegate.loadLeakCanary(application)
-
+    // 遍历五种监听器进行分别注册
     watchersToInstall.forEach {
       it.install()
     }
@@ -125,11 +128,13 @@ object AppWatcher {
    * The passed in [reachabilityWatcher] should probably delegate to [objectWatcher] but can
    * be used to filter out specific instances.
    */
+  /** 创建监听集合 */
   fun appDefaultWatchers(
     application: Application,
     reachabilityWatcher: ReachabilityWatcher = objectWatcher
   ): List<InstallableWatcher> {
     return listOf(
+      // 对应5中Android泄漏场景（Activity、Fragment和ViewModel、View、Service）
       ActivityWatcher(application, reachabilityWatcher),
       FragmentAndViewModelWatcher(application, reachabilityWatcher),
       RootViewWatcher(reachabilityWatcher),

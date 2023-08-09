@@ -8,6 +8,7 @@ import leakcanary.internal.friendly.noOpDelegate
  * Expects activities to become weakly reachable soon after they receive the [Activity.onDestroy]
  * callback.
  */
+/** Activity的泄漏监听 */
 class ActivityWatcher(
   private val application: Application,
   private val reachabilityWatcher: ReachabilityWatcher
@@ -16,6 +17,7 @@ class ActivityWatcher(
   private val lifecycleCallbacks =
     object : Application.ActivityLifecycleCallbacks by noOpDelegate() {
       override fun onActivityDestroyed(activity: Activity) {
+        // 监听Activity.onDestroy()交给ObjectWatcher分析
         reachabilityWatcher.expectWeaklyReachable(
           activity, "${activity::class.java.name} received Activity#onDestroy() callback"
         )

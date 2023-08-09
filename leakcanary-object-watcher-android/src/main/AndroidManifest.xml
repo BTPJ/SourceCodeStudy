@@ -3,7 +3,7 @@
     xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.squareup.leakcanary.objectwatcher"
     >
-
+  <!--可以通过配置leak_canary_watcher_auto_install变量设置是否自行初始化，默认为true -->
   <application>
     <provider
         android:name="leakcanary.internal.MainProcessAppWatcherInstaller"

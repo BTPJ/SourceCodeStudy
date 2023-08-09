@@ -27,11 +27,17 @@ import java.lang.ref.WeakReference
  * [heapDumpUptimeMillis] should be set with the current time from [Clock.uptimeMillis] right
  * before dumping the heap, so that we can later determine how long an object was retained.
  */
+/** 弱引用包装类 */
 class KeyedWeakReference(
+  /** 被监控对象 */
   referent: Any,
+  /** 映射表的Key */
   val key: String,
+  /** 描述 */
   val description: String,
+  /** 监控开始时间（引用创建时间） */
   val watchUptimeMillis: Long,
+  /** 关联的引用队列 */
   referenceQueue: ReferenceQueue<Any>
 ) : WeakReference<Any>(
   referent, referenceQueue
@@ -40,6 +46,7 @@ class KeyedWeakReference(
    * Time at which the associated object ([referent]) was considered retained, or -1 if it hasn't
    * been yet.
    */
+  /** 判定对象为泄漏对象的时间，-1表示非泄漏对象或还未判定完毕 */
   @Volatile
   var retainedUptimeMillis = -1L
 
@@ -49,6 +56,7 @@ class KeyedWeakReference(
   }
 
   companion object {
+    /** 记录最近一次触发Heap Dump的时间 */
     @Volatile
     @JvmStatic var heapDumpUptimeMillis = 0L
   }

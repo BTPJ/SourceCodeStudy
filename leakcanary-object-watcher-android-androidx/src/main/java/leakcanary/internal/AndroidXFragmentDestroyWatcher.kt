@@ -22,6 +22,7 @@ import androidx.fragment.app.FragmentActivity
 import androidx.fragment.app.FragmentManager
 import leakcanary.ReachabilityWatcher
 
+/** Androidx包下的Fragment、FragmentView以及ViewModel监听 */
 internal class AndroidXFragmentDestroyWatcher(
   private val reachabilityWatcher: ReachabilityWatcher
 ) : (Activity) -> Unit {
@@ -33,6 +34,7 @@ internal class AndroidXFragmentDestroyWatcher(
       fragment: Fragment,
       savedInstanceState: Bundle?
     ) {
+      // 注册Fragment级别的ViewModel Hook
       ViewModelClearedWatcher.install(fragment, reachabilityWatcher)
     }
 
@@ -42,6 +44,7 @@ internal class AndroidXFragmentDestroyWatcher(
     ) {
       val view = fragment.view
       if (view != null) {
+        // 监听FragmentView.onDestroy()将Fragment.View交给ObjectWatcher分析
         reachabilityWatcher.expectWeaklyReachable(
           view, "${fragment::class.java.name} received Fragment#onDestroyView() callback " +
           "(references to its views should be cleared to prevent leaks)"
@@ -53,6 +56,7 @@ internal class AndroidXFragmentDestroyWatcher(
       fm: FragmentManager,
       fragment: Fragment
     ) {
+      // 监听Fragment.onDestroy()将Fragment交给ObjectWatcher分析
       reachabilityWatcher.expectWeaklyReachable(
         fragment, "${fragment::class.java.name} received Fragment#onDestroy() callback"
       )
@@ -60,9 +64,12 @@ internal class AndroidXFragmentDestroyWatcher(
   }
 
   override fun invoke(activity: Activity) {
+    // 这段代码会在Activity.onCreate()中执行
     if (activity is FragmentActivity) {
       val supportFragmentManager = activity.supportFragmentManager
+      // 注册Fragment生命周期监听
       supportFragmentManager.registerFragmentLifecycleCallbacks(fragmentLifecycleCallbacks, true)
+      // 注册Activity级别的ViewModel Hook
       ViewModelClearedWatcher.install(activity, reachabilityWatcher)
     }
   }

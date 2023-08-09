@@ -47,6 +47,7 @@ class ServiceWatcher(private val reachabilityWatcher: ReachabilityWatcher) : Ins
       "ServiceWatcher already installed"
     }
     try {
+      // Hook ActivityThread类中的mH.mCallback
       swapActivityThreadHandlerCallback { mCallback ->
         uninstallActivityThreadHandlerCallback = {
           swapActivityThreadHandlerCallback {
@@ -62,15 +63,21 @@ class ServiceWatcher(private val reachabilityWatcher: ReachabilityWatcher) : Ins
             return@Callback false
           }
 
+          // 监听Service.onStop()事件消息
           if (msg.what == STOP_SERVICE) {
             val key = msg.obj as IBinder
+            // activityThreadServices是通过反射获取的ActivityThread类中的mServices成员变量<IBinder, Service>
             activityThreadServices[key]?.let {
+              // 服务销毁前的处理，这里主要是暂存
               onServicePreDestroy(key, it)
             }
           }
+          // Hook后继续执行Framework本身的逻辑
           mCallback?.handleMessage(msg) ?: false
         }
       }
+
+      // Hook AMS IActivityManager
       swapActivityManager { activityManagerInterface, activityManagerInstance ->
         uninstallActivityManager = {
           swapActivityManager { _, _ ->
@@ -80,12 +87,15 @@ class ServiceWatcher(private val reachabilityWatcher: ReachabilityWatcher) : Ins
         Proxy.newProxyInstance(
           activityManagerInterface.classLoader, arrayOf(activityManagerInterface)
         ) { _, method, args ->
+          // 代理serviceDoneExecuting()方法
           if (METHOD_SERVICE_DONE_EXECUTING == method.name) {
             val token = args!![0] as IBinder
             if (servicesToBeDestroyed.containsKey(token)) {
+              // 处理Service销毁，主要是将service交给ObjectWatcher进行监控
               onServiceDestroyed(token)
             }
           }
+          // 继续执行serviceDoneExecuting()本身的方法
           try {
             if (args == null) {
               method.invoke(activityManagerInstance)
@@ -127,6 +137,10 @@ class ServiceWatcher(private val reachabilityWatcher: ReachabilityWatcher) : Ins
     }
   }
 
+  /**
+   * Hook修改ActivityThread类中的mH.mCallback
+   * swap 是一个 lambda 表达式，参数为原对象，返回值为注入的新对象
+   */
   private fun swapActivityThreadHandlerCallback(swap: (Handler.Callback?) -> Handler.Callback?) {
     val mHField =
       activityThreadClass.getDeclaredField("mH").apply { isAccessible = true }
@@ -138,6 +152,10 @@ class ServiceWatcher(private val reachabilityWatcher: ReachabilityWatcher) : Ins
     mCallbackField[mH] = swap(mCallback)
   }
 
+  /**
+   * Hook修改ActivityThread类中的mH.mCallback
+   * swap 是一个 lambda 表达式，参数为 IActivityManager 的 Class 对象和接口原实现对象，返回值为注入的新对象
+   */
   @SuppressLint("PrivateApi")
   private fun swapActivityManager(swap: (Class<*>, Any) -> Any) {
     val singletonClass = Class.forName("android.util.Singleton")
@@ -162,6 +180,7 @@ class ServiceWatcher(private val reachabilityWatcher: ReachabilityWatcher) : Ins
     val activityManagerInstance = singletonGetMethod.invoke(activityManagerSingletonInstance)
 
     val iActivityManagerInterface = Class.forName("android.app.IActivityManager")
+    // 将swap的返回值作为新对象，实现 Hook
     mInstanceField[activityManagerSingletonInstance] =
       swap(iActivityManagerInterface, activityManagerInstance!!)
   }
