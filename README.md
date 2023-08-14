@@ -19,3 +19,8 @@ Framework和常见第三方库源码阅读
 - 版本：V2.12
 - 路径：https://github.com/square/leakcanary
   - tag 2.12
+ 
+# 5. Glide
+- 版本：V4.15.1
+- 路径：https://github.com/bumptech/glide
+  - tag 4.15.1
