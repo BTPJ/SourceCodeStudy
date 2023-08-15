@@ -1,0 +1,17 @@
+-- Merging decision tree log ---
+manifest
+ADDED from E:\Android\Code\GlideStudy\third_party\gif_decoder\src\main\AndroidManifest.xml:2:1-6:12
+INJECTED from E:\Android\Code\GlideStudy\third_party\gif_decoder\src\main\AndroidManifest.xml:2:1-6:12
+	package
+		ADDED from E:\Android\Code\GlideStudy\third_party\gif_decoder\src\main\AndroidManifest.xml:3:3-42
+		INJECTED from E:\Android\Code\GlideStudy\third_party\gif_decoder\src\main\AndroidManifest.xml
+application
+ADDED from E:\Android\Code\GlideStudy\third_party\gif_decoder\src\main\AndroidManifest.xml:5:5-19
+uses-sdk
+INJECTED from E:\Android\Code\GlideStudy\third_party\gif_decoder\src\main\AndroidManifest.xml reason: use-sdk injection requested
+INJECTED from E:\Android\Code\GlideStudy\third_party\gif_decoder\src\main\AndroidManifest.xml
+INJECTED from E:\Android\Code\GlideStudy\third_party\gif_decoder\src\main\AndroidManifest.xml
+	android:targetSdkVersion
+		INJECTED from E:\Android\Code\GlideStudy\third_party\gif_decoder\src\main\AndroidManifest.xml
+	android:minSdkVersion
+		INJECTED from E:\Android\Code\GlideStudy\third_party\gif_decoder\src\main\AndroidManifest.xml
